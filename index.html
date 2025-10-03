@@ -14,7 +14,9 @@
   </script>
 
   <style>
-    
+    /* ---- layout + theme ---- */
+    :root{ --camSafe: 0px; } /* will be set to camDock height by JS */
+
     body {
       margin: 0;
       background: #000;
@@ -50,6 +52,8 @@
       font-size: 2em;
       line-height: 1.5;
       padding: 2em;
+      /* keep last lines clear of the camera dock automatically */
+      padding-bottom: calc(2em + var(--camSafe));
       overflow-y: auto;
       transition: transform 0.3s linear;
     }
@@ -70,17 +74,10 @@
       background: #222;
       color: #fff;
     }
-    #editorModal button {
-      margin-top: 1em;
-    }
-    .dark {
-      background: #000;
-      color: #fff;
-    }
-    .light {
-      background: #fff;
-      color: #000;
-    }
+    #editorModal button { margin-top: 1em; }
+
+    .dark  { background:#000; color:#fff; }
+    .light { background:#fff; color:#000; }
   </style>
 </head>
 <body>
@@ -97,8 +94,8 @@
   </header>
 
   <div id="prompter" contenteditable="false">
-    Welcome to your Teleprompter PWA.  
-    Click 📝 Edit text to paste your script.  
+    Welcome to your Teleprompter PWA.<br/>
+    Click 📝 Edit text to paste your script.<br/>
     Then hit ▶️ to start scrolling.
   </div>
 
@@ -177,7 +174,7 @@
     };
 
     speedMinus.onclick = () => speed = Math.max(0.5, speed - 0.5);
-    speedPlus.onclick = () => speed += 0.5;
+    speedPlus.onclick  = () => speed += 0.5;
 
     mirrorBtn.onclick = () => {
       mirrored = !mirrored;
@@ -212,126 +209,146 @@
       editorModal.style.display = "none";
     };
   </script>
-  <!-- ===== Camera Pack (front camera only) ===== -->
-<style>
-#camDock{position:fixed;right:12px;bottom:12px;z-index:9999;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
-#camDock button,#camDock select,#camDock a{font:14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;border:1px solid rgba(255,255,255,.2);background:#1b1e27;color:#e9eef5;border-radius:8px;padding:6px 10px;cursor:pointer}
-#camDock button:hover,#camDock a:hover{background:#232838}
-#camDock .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-#camPreview{width:220px;max-width:40vw;border-radius:8px;background:#000;display:block}
-#saveModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000}
-#saveModal .card{background:#0e0f13;color:#e9eef5;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px;min-width:260px}
-#saveModal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-.hidden{display:none!important}
-</style>
 
-<div id="camDock">
-<video id="camPreview" playsinline autoplay muted></video>
-<div class="row">
-<button id="camToggle">🎥 Camera: Off</button>
-<select id="resSel" title="Resolution">
-<option value="720">720p</option>
-<option value="1080" selected>1080p</option>
-<option value="2160">2160p</option>
-</select>
-<button id="micMute" disabled>🔇 Mute</button>
-</div>
-<div class="row">
-<button id="recStart" disabled>⏺ Start</button>
-<button id="recStop" class="hidden">⏹ Stop</button>
-<span id="recStat" style="color:#9aa4b2;font-size:12px">Ready</span>
-</div>
-</div>
+  <!-- ===== Camera Pack (front camera only) + auto safe area ===== -->
+  <style>
+    #camDock{position:fixed;right:12px;bottom:12px;z-index:9999;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+    #camDock button,#camDock select,#camDock a{font:14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;border:1px solid rgba(255,255,255,.2);background:#1b1e27;color:#e9eef5;border-radius:8px;padding:6px 10px;cursor:pointer}
+    #camDock button:hover,#camDock a:hover{background:#232838}
+    #camDock .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    #camPreview{width:220px;max-width:40vw;border-radius:8px;background:#000;display:block}
+    #saveModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:10000}
+    #saveModal .card{background:#0e0f13;color:#e9eef5;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px;min-width:260px}
+    #saveModal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+    .hidden{display:none!important}
+  </style>
 
-<div id="saveModal">
-<div class="card">
-<div><b>Recording finished</b></div>
-<div id="fileInfo" style="color:#9aa4b2;margin-top:6px;font-size:13px"></div>
-<div class="actions">
-<button id="deleteClip">Delete</button>
-<a id="downloadClip" class="btn" download>Save</a>
-</div>
-</div>
-</div>
+  <div id="camDock">
+    <video id="camPreview" playsinline autoplay muted></video>
+    <div class="row">
+      <button id="camToggle">🎥 Camera: Off</button>
+      <select id="resSel" title="Resolution">
+        <option value="720">720p</option>
+        <option value="1080" selected>1080p</option>
+        <option value="2160">2160p</option>
+      </select>
+      <button id="micMute" disabled>🔇 Mute</button>
+    </div>
+    <div class="row">
+      <button id="recStart" disabled>⏺ Start</button>
+      <button id="recStop" class="hidden">⏹ Stop</button>
+      <span id="recStat" style="color:#9aa4b2;font-size:12px">Ready</span>
+    </div>
+  </div>
 
-<script>
-(function(){
-const $ = (id)=>document.getElementById(id);
-const preview=$('camPreview'), camToggle=$('camToggle'), resSel=$('resSel'), micMute=$('micMute');
-const recStart=$('recStart'), recStop=$('recStop'), recStat=$('recStat');
-const saveModal=$('saveModal'), downloadClip=$('downloadClip'), deleteClip=$('deleteClip'), fileInfo=$('fileInfo');
+  <div id="saveModal">
+    <div class="card">
+      <div><b>Recording finished</b></div>
+      <div id="fileInfo" style="color:#9aa4b2;margin-top:6px;font-size:13px"></div>
+      <div class="actions">
+        <button id="deleteClip">Delete</button>
+        <a id="downloadClip" class="btn" download>Save</a>
+      </div>
+    </div>
+  </div>
 
-let stream=null, mediaRecorder=null, chunks=[], isMuted=false, startedAt=0;
+  <script>
+  (function(){
+    const $ = (id)=>document.getElementById(id);
+    const preview=$('camPreview'), camToggle=$('camToggle'), resSel=$('resSel'), micMute=$('micMute');
+    const recStart=$('recStart'), recStop=$('recStop'), recStat=$('recStat');
+    const saveModal=$('saveModal'), downloadClip=$('downloadClip'), deleteClip=$('deleteClip'), fileInfo=$('fileInfo');
+    const camDock = document.getElementById('camDock');
 
-function wantedConstraints(){
-const v=resSel.value;
-const w=v==='2160'?3840:(v==='1080'?1920:1280);
-const h=v==='2160'?2160:(v==='1080'?1080:720);
-return { video:{ width:{ideal:w}, height:{ideal:h}, frameRate:{ideal:30}, facingMode:'user' }, audio:true }; // FRONT CAM ONLY
-}
+    let stream=null, mediaRecorder=null, chunks=[], isMuted=false, startedAt=0;
 
-function stopStream(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
-function humanSize(bytes){ const u=['B','KB','MB','GB']; let i=0,n=bytes; while(n>=1024&&i<u.length-1){ n/=1024; i++; } return n.toFixed(1)+' '+u[i]; }
-function filename(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `Teleprompter_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.webm`; }
+    /* --- auto safe area: keep last lines above the camera panel --- */
+    function updateCamSafe(){
+      const h = camDock ? camDock.offsetHeight : 0;
+      document.documentElement.style.setProperty('--camSafe', (h + 12) + 'px');
+    }
+    window.addEventListener('resize', updateCamSafe);
+    if (window.ResizeObserver) new ResizeObserver(updateCamSafe).observe(camDock);
+    updateCamSafe();
 
-async function startCamera(){
-try{
-stream && stopStream(stream);
-stream = await navigator.mediaDevices.getUserMedia(wantedConstraints());
-preview.srcObject = stream;
-camToggle.textContent = '🎥 Camera: On';
-recStart.disabled=false; micMute.disabled=false;
-recStat.textContent='Ready';
-}catch(err){
-alert('Camera/Microphone permission or device error.\n'+(err.message||err));
-camToggle.textContent='🎥 Camera: Off';
-recStart.disabled=true; micMute.disabled=true;
-}
-}
+    function wantedConstraints(){
+      const v=resSel.value;
+      const w=v==='2160'?3840:(v==='1080'?1920:1280);
+      const h=v==='2160'?2160:(v==='1080'?1080:720);
+      return { video:{ width:{ideal:w}, height:{ideal:h}, frameRate:{ideal:30}, facingMode:'user' }, audio:true }; // FRONT CAM ONLY
+    }
 
-camToggle.onclick=async ()=>{
-if(stream){ stopStream(stream); stream=null; preview.srcObject=null; camToggle.textContent='🎥 Camera: Off'; recStart.disabled=true; micMute.disabled=true; }
-else { await startCamera(); }
-};
-resSel.onchange=async ()=>{ if(stream) await startCamera(); };
-micMute.onclick=()=>{ if(!stream) return; isMuted=!isMuted; stream.getAudioTracks().forEach(t=>t.enabled=!isMuted); micMute.textContent=isMuted?'Unmute':'🔇 Mute'; };
+    function stopStream(s){ if(!s) return; s.getTracks().forEach(t=>t.stop()); }
+    function humanSize(bytes){ const u=['B','KB','MB','GB']; let i=0,n=bytes; while(n>=1024&&i<u.length-1){ n/=1024; i++; } return n.toFixed(1)+' '+u[i]; }
+    function filename(){ const d=new Date(),p=n=>String(n).padStart(2,'0'); return `Teleprompter_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}.webm`; }
 
-// Recording
-recStart.onclick=async ()=>{
-if(!stream) await startCamera();
-try{
-chunks=[];
-const opts = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? {mimeType:'video/webm;codecs=vp9,opus'} :
-MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? {mimeType:'video/webm;codecs=vp8,opus'} : {};
-mediaRecorder = new MediaRecorder(stream, opts);
-mediaRecorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-mediaRecorder.onstop = onStop;
-mediaRecorder.start(1000);
-startedAt = Date.now();
-recStart.classList.add('hidden'); recStop.classList.remove('hidden');
-recStat.textContent='Recording…';
-}catch(err){ alert('Recording not supported in this browser: '+(err.message||err)); }
-};
-recStop.onclick=()=>{
-if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
-recStart.classList.remove('hidden'); recStop.classList.add('hidden');
-};
+    async function startCamera(){
+      try{
+        stream && stopStream(stream);
+        stream = await navigator.mediaDevices.getUserMedia(wantedConstraints());
+        preview.srcObject = stream;
+        camToggle.textContent = '🎥 Camera: On';
+        recStart.disabled=false; micMute.disabled=false;
+        recStat.textContent='Ready';
+      }catch(err){
+        alert('Camera/Microphone permission or device error.\n'+(err.message||err));
+        camToggle.textContent='🎥 Camera: Off';
+        recStart.disabled=true; micMute.disabled=true;
+      } finally {
+        updateCamSafe();
+      }
+    }
 
-function onStop(){
-const blob = new Blob(chunks,{type:chunks[0]?.type||'video/webm'});
-const url = URL.createObjectURL(blob);
-const name = filename();
-downloadClip.href = url; downloadClip.download = name;
-const dur = ((Date.now()-startedAt)/1000).toFixed(1);
-fileInfo.textContent = `File: ${name} • Duration: ${dur}s • Size: ${humanSize(blob.size)}`;
-saveModal.style.display='flex';
-recStat.textContent='Ready';
-deleteClip.onclick=()=>{ saveModal.style.display='none'; URL.revokeObjectURL(url); };
-downloadClip.onclick=()=>{ setTimeout(()=>URL.revokeObjectURL(url),5000); saveModal.style.display='none'; };
-}
-})();
-</script>
-<!-- ===== /Camera Pack ===== -->
+    camToggle.onclick=async ()=>{
+      if(stream){
+        stopStream(stream);
+        stream=null;
+        preview.srcObject=null;
+        camToggle.textContent='🎥 Camera: Off';
+        recStart.disabled=true; micMute.disabled=true;
+        updateCamSafe();
+      }else{
+        await startCamera();
+      }
+    };
+    resSel.onchange=async ()=>{ if(stream) await startCamera(); updateCamSafe(); };
+    micMute.onclick=()=>{ if(!stream) return; isMuted=!isMuted; stream.getAudioTracks().forEach(t=>t.enabled=!isMuted); micMute.textContent=isMuted?'Unmute':'🔇 Mute'; };
+
+    // Recording
+    recStart.onclick=async ()=>{
+      if(!stream) await startCamera();
+      try{
+        chunks=[];
+        const opts = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? {mimeType:'video/webm;codecs=vp9,opus'} :
+                     MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? {mimeType:'video/webm;codecs=vp8,opus'} : {};
+        mediaRecorder = new MediaRecorder(stream, opts);
+        mediaRecorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+        mediaRecorder.onstop = onStop;
+        mediaRecorder.start(1000);
+        startedAt = Date.now();
+        recStart.classList.add('hidden'); recStop.classList.remove('hidden');
+        recStat.textContent='Recording…';
+      }catch(err){ alert('Recording not supported in this browser: '+(err.message||err)); }
+    };
+    recStop.onclick=()=>{
+      if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+      recStart.classList.remove('hidden'); recStop.classList.add('hidden');
+    };
+
+    function onStop(){
+      const blob = new Blob(chunks,{type:chunks[0]?.type||'video/webm'});
+      const url = URL.createObjectURL(blob);
+      const name = filename();
+      downloadClip.href = url; downloadClip.download = name;
+      const dur = ((Date.now()-startedAt)/1000).toFixed(1);
+      fileInfo.textContent = `File: ${name} • Duration: ${dur}s • Size: ${humanSize(blob.size)}`;
+      saveModal.style.display='flex';
+      recStat.textContent='Ready';
+      deleteClip.onclick=()=>{ saveModal.style.display='none'; URL.revokeObjectURL(url); };
+      downloadClip.onclick=()=>{ setTimeout(()=>URL.revokeObjectURL(url),5000); saveModal.style.display='none'; };
+    }
+  })();
+  </script>
+  <!-- ===== /Camera Pack ===== -->
 </body>
 </html>
-
