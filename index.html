@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teleprompter</title>
+
+  <!-- Manifest & SW -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      background: #111;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.5em;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 10;
+    }
+    button {
+      font-size: 1em;
+      background: #222;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 0.5em;
+      cursor: pointer;
+    }
+    #prompter {
+      margin-top: 60px;
+      flex: 1;
+      font-size: 2em;
+      line-height: 1.5;
+      padding: 2em;
+      overflow-y: auto;
+      transition: transform 0.3s linear;
+    }
+    #editorModal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #editorModal textarea {
+      width: 90%;
+      height: 70%;
+      font-size: 1.2em;
+      background: #222;
+      color: #fff;
+    }
+    #editorModal button {
+      margin-top: 1em;
+    }
+    .dark {
+      background: #000;
+      color: #fff;
+    }
+    .light {
+      background: #fff;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button id="playBtn">▶️</button>
+    <button id="fontMinus">A-</button>
+    <button id="fontPlus">A+</button>
+    <button id="speedMinus">-⏩</button>
+    <button id="speedPlus">+⏩</button>
+    <button id="mirrorBtn">🪞</button>
+    <button id="fullscreenBtn">⛶</button>
+    <button id="themeBtn">🌗</button>
+    <button id="editBtn">📝</button>
+  </header>
+
+  <div id="prompter" contenteditable="false">
+    Welcome to your Teleprompter PWA.  
+    Click 📝 Edit text to paste your script.  
+    Then hit ▶️ to start scrolling.
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editorModal">
+    <div>
+      <textarea id="editor"></textarea><br>
+      <button id="saveTextBtn">Save</button>
+      <button id="closeEditorBtn">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const prompter = document.getElementById("prompter");
+    const playBtn = document.getElementById("playBtn");
+    const fontMinus = document.getElementById("fontMinus");
+    const fontPlus = document.getElementById("fontPlus");
+    const speedMinus = document.getElementById("speedMinus");
+    const speedPlus = document.getElementById("speedPlus");
+    const mirrorBtn = document.getElementById("mirrorBtn");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    const themeBtn = document.getElementById("themeBtn");
+    const editBtn = document.getElementById("editBtn");
+
+    const editorModal = document.getElementById("editorModal");
+    const editor = document.getElementById("editor");
+    const saveTextBtn = document.getElementById("saveTextBtn");
+    const closeEditorBtn = document.getElementById("closeEditorBtn");
+
+    let scrolling = false;
+    let speed = 1; // pixels per frame
+    let scrollInterval;
+    let fontSize = 2; // em
+    let mirrored = false;
+    let darkMode = true;
+
+    // Load saved state
+    window.onload = () => {
+      if(localStorage.getItem("prompterText")) {
+        prompter.innerHTML = localStorage.getItem("prompterText");
+      }
+      if(localStorage.getItem("fontSize")) {
+        fontSize = parseFloat(localStorage.getItem("fontSize"));
+        prompter.style.fontSize = fontSize + "em";
+      }
+      if(localStorage.getItem("theme") === "light") {
+        document.body.classList.remove("dark");
+        document.body.classList.add("light");
+        darkMode = false;
+      }
+    };
+
+    playBtn.onclick = () => {
+      if(!scrolling) {
+        scrolling = true;
+        playBtn.textContent = "⏸️";
+        scrollInterval = setInterval(() => {
+          prompter.scrollTop += speed;
+        }, 30);
+      } else {
+        scrolling = false;
+        playBtn.textContent = "▶️";
+        clearInterval(scrollInterval);
+      }
+    };
+
+    fontMinus.onclick = () => {
+      fontSize = Math.max(1, fontSize - 0.2);
+      prompter.style.fontSize = fontSize + "em";
+      localStorage.setItem("fontSize", fontSize);
+    };
+    fontPlus.onclick = () => {
+      fontSize += 0.2;
+      prompter.style.fontSize = fontSize + "em";
+      localStorage.setItem("fontSize", fontSize);
+    };
+
+    speedMinus.onclick = () => speed = Math.max(0.5, speed - 0.5);
+    speedPlus.onclick = () => speed += 0.5;
+
+    mirrorBtn.onclick = () => {
+      mirrored = !mirrored;
+      prompter.style.transform = mirrored ? "scaleX(-1)" : "none";
+    };
+
+    fullscreenBtn.onclick = () => {
+      if(!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    };
+
+    themeBtn.onclick = () => {
+      darkMode = !darkMode;
+      document.body.classList.toggle("light", !darkMode);
+      document.body.classList.toggle("dark", darkMode);
+      localStorage.setItem("theme", darkMode ? "dark" : "light");
+    };
+
+    editBtn.onclick = () => {
+      editor.value = prompter.innerHTML.replace(/<br>/g, "\n");
+      editorModal.style.display = "flex";
+    };
+    saveTextBtn.onclick = () => {
+      prompter.innerHTML = editor.value.replace(/\n/g, "<br>");
+      localStorage.setItem("prompterText", prompter.innerHTML);
+      editorModal.style.display = "none";
+    };
+    closeEditorBtn.onclick = () => {
+      editorModal.style.display = "none";
+    };
+  </script>
+</body>
+</html>
