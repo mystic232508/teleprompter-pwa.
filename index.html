@@ -15,7 +15,10 @@
 
   <style>
     /* ---- layout + theme ---- */
-    :root{ --camSafe: 0px; } /* will be set to camDock height by JS */
+    :root{
+      --camSafe: 0px;   /* set by camera dock */
+      --leadIn: 35vh;   /* space before first line so you can get ready */
+    }
 
     body {
       margin: 0;
@@ -52,7 +55,8 @@
       font-size: 2em;
       line-height: 1.5;
       padding: 2em;
-      /* keep last lines clear of the camera dock automatically */
+      /* lead-in at top + safe space at bottom for camera */
+      padding-top: calc(2em + var(--leadIn));
       padding-bottom: calc(2em + var(--camSafe));
       overflow-y: auto;
       transition: transform 0.3s linear;
@@ -91,6 +95,7 @@
     <button id="fullscreenBtn">⛶</button>
     <button id="themeBtn">🌗</button>
     <button id="editBtn">📝</button>
+    <button id="clearBtn">🧹</button>
   </header>
 
   <div id="prompter" contenteditable="false">
@@ -119,6 +124,7 @@
     const fullscreenBtn = document.getElementById("fullscreenBtn");
     const themeBtn = document.getElementById("themeBtn");
     const editBtn = document.getElementById("editBtn");
+    const clearBtn = document.getElementById("clearBtn");
 
     const editorModal = document.getElementById("editorModal");
     const editor = document.getElementById("editor");
@@ -204,9 +210,19 @@
       prompter.innerHTML = editor.value.replace(/\n/g, "<br>");
       localStorage.setItem("prompterText", prompter.innerHTML);
       editorModal.style.display = "none";
+      prompter.scrollTop = 0; // jump back to start after saving
     };
     closeEditorBtn.onclick = () => {
       editorModal.style.display = "none";
+    };
+
+    // 🧹 Clear button: wipes teleprompter + saved script
+    clearBtn.onclick = () => {
+      const confirmClear = confirm("Clear teleprompter text?");
+      if (!confirmClear) return;
+      prompter.innerHTML = "";
+      localStorage.removeItem("prompterText");
+      prompter.scrollTop = 0;
     };
   </script>
 
